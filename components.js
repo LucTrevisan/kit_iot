@@ -5,8 +5,8 @@ const GPIO_MAP = [
   { gpio: 0,  func: "SCL (I2C)",          comp: "mpu",    shared: ["lcd"] },
   { gpio: 1,  func: "SDA (I2C)",          comp: "mpu",    shared: ["lcd"] },
   { gpio: 2,  func: "Não Usar",           comp: "esp32" },
-  { gpio: 3,  func: "Trigger (HC-SR04)",  comp: "hcsr04" },
-  { gpio: 4,  func: "Echo (HC-SR04)",     comp: "hcsr04" },
+  { gpio: 3,  func: "Echo (HC-SR04)",     comp: "hcsr04" },
+  { gpio: 4,  func: "Trigger (HC-SR04)",  comp: "hcsr04" },
   { gpio: 5,  func: "CLK (KY-040)",       comp: "ky040" },
   { gpio: 6,  func: "DT (KY-040)",        comp: "ky040" },
   { gpio: 7,  func: "Botão (KY-040)",     comp: "ky040" },
@@ -140,7 +140,7 @@ void loop() {}`,
     nome: "HC-SR04",
     tipo: "Sensor de distância ultrassônico",
     lcd: ["HC-SR04", "Dist: 23.4 cm"],
-    gpios: [["GPIO3", "Trigger"], ["GPIO4", "Echo"]],
+    gpios: [["GPIO3", "Echo"], ["GPIO4", "Trigger"]],
     specs: [
       ["Alimentação", "5 V DC · ~15 mA"],
       ["Frequência", "40 kHz"],
@@ -155,7 +155,7 @@ void loop() {}`,
       "Distância (cm) = tempo (µs) × 0,0343 ÷ 2  (≈ tempo ÷ 58). Os transdutores ficam expostos na lateral do gabinete.",
     dica: "O pino Echo do HC-SR04 clássico sai em 5 V e o ESP32-C3 trabalha em 3,3 V: use divisor resistivo ou a versão HC-SR04P (3,3 V).",
     codigo:
-`const int TRIG = 3, ECHO = 4;
+`const int TRIG = 4, ECHO = 3;
 
 void setup() {
   Serial.begin(115200);

@@ -319,8 +319,8 @@ window.addEventListener("unhandledrejection", (e) => console.error("[promise]", 
       s.isPickable = k1.isPickable = k2.isPickable = false;
     }
     // texto exatamente como gravado na tampa
-    const lines = ["GPIO0-SCL (I2C)", "GPIO1-SDA (I2C)", "GPIO2-Não Usar", "GPIO3-Trigger(HC-SR04)",
-      "GPIO4-Echo(HC-SR04)", "GPIO5-CLK (KY-040)", "GPIO6-DT (KY-040)", "GPIO7-Botão (KY-040)",
+    const lines = ["GPIO0-SCL (I2C)", "GPIO1-SDA (I2C)", "GPIO2-Não Usar", "GPIO3-Echo(HC-SR04)",
+      "GPIO4-Trigger(HC-SR04)", "GPIO5-CLK (KY-040)", "GPIO6-DT (KY-040)", "GPIO7-Botão (KY-040)",
       "GPIO8-Não Usar", "GPIO9-Não Usar", "GPIO10-PWM (SG90)"];
     const t = textPlane(lid, "txtLid", 62, 46, 1024, 760, (c, W, H) => {
       c.textAlign = "left"; c.textBaseline = "middle"; c.font = "bold 66px 'Courier New', monospace";
