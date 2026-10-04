@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Kit IoT ESP32-C3</title>
+<style>
+  :root {
+    --bg: #12151b;
+    --panel: rgba(22, 26, 34, 0.92);
+    --line: rgba(255, 255, 255, 0.09);
+    --text: #e8ecf2;
+    --muted: #97a1b2;
+    --accent: #22d3ee;
+    --red: #e11d48;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+  #c { position: fixed; inset: 0; width: 100%; height: 100%; outline: none; touch-action: none; }
+
+  header { position: fixed; top: 16px; left: 16px; pointer-events: none; }
+  header h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: .2px; }
+  header h1 span { color: var(--red); }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
+
+  #list { position: fixed; top: 72px; left: 16px; width: 210px; display: flex; flex-direction: column; gap: 4px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px; backdrop-filter: blur(8px); }
+  #list .t { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 4px 6px 6px; }
+  #list button { all: unset; cursor: pointer; padding: 7px 9px; border-radius: 8px; font-size: 13.5px; display: flex;
+    justify-content: space-between; gap: 8px; }
+  #list button small { color: var(--muted); font-size: 11px; font-family: Consolas, monospace; }
+  #list button:hover { background: rgba(255,255,255,.06); }
+  #list button.on { background: rgba(34,211,238,.15); color: #a5f3fc; }
+
+  #bar { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; flex-wrap: wrap;
+    justify-content: center; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 6px;
+    backdrop-filter: blur(8px); max-width: calc(100vw - 32px); }
+  #bar button { all: unset; cursor: pointer; padding: 8px 13px; border-radius: 9px; font-size: 13.5px; white-space: nowrap; }
+  #bar button:hover { background: rgba(255,255,255,.08); }
+  #bar button.xr { background: var(--accent); color: #062a33; font-weight: 600; }
+  #bar button.xr:hover { background: #67e8f9; }
+  #bar button[hidden] { display: none; }
+
+  #info { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 380px; background: var(--panel); overflow: hidden;
+    border: 1px solid var(--line); border-radius: 14px; backdrop-filter: blur(10px); display: flex; flex-direction: column;
+    transform: translateX(calc(100% + 24px)); transition: transform .35s ease; }
+  #info.open { transform: none; }
+  #info .head { padding: 18px 18px 12px; border-bottom: 1px solid var(--line); position: relative; }
+  #info .tipo { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+  #info h2 { margin: 4px 0 0; font-size: 22px; }
+  #info .close { all: unset; cursor: pointer; position: absolute; top: 12px; right: 12px; width: 32px; height: 32px;
+    border-radius: 8px; display: grid; place-items: center; font-size: 18px; color: var(--muted); }
+  #info .close:hover { background: rgba(255,255,255,.08); color: var(--text); }
+  #info .body { padding: 14px 18px 20px; overflow-y: auto; overflow-x: hidden; min-width: 0; min-height: 0; }
+  #info.open ~ #status { display: none; }
+  .gp { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .gp span { background: rgba(34,211,238,.12); border: 1px solid rgba(34,211,238,.35); color: #a5f3fc; padding: 4px 8px;
+    border-radius: 7px; font-size: 12.5px; font-family: Consolas, monospace; }
+  .gp span b { color: #fff; }
+  table.specs { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 14px; }
+  table.specs td { padding: 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.specs td:first-child { color: var(--muted); width: 36%; padding-right: 10px; }
+  #info p { font-size: 13.5px; line-height: 1.55; margin: 0 0 12px; color: #d3d9e3; }
+  .dica { background: rgba(250,204,21,.09); border-left: 3px solid #facc15; padding: 9px 11px; border-radius: 6px;
+    font-size: 13px; line-height: 1.5; margin-bottom: 14px; color: #fde68a; }
+  h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 4px 0 8px; }
+  pre { background: #0b0d12; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 12px;
+    line-height: 1.45; overflow-x: auto; margin: 0; color: #c9e4ff; font-family: Consolas, "Courier New", monospace; }
+
+  #tip { position: fixed; pointer-events: none; background: #0b0d12; border: 1px solid var(--line); padding: 4px 8px;
+    border-radius: 6px; font-size: 12.5px; display: none; z-index: 5; }
+  #status { position: fixed; left: 16px; bottom: 16px; font-size: 12px; color: var(--muted); max-width: 280px;
+    pointer-events: none; }
+  #status.err { color: #fca5a5; }
+
+  #modal { position: fixed; inset: 0; display: none; place-items: center; background: rgba(0,0,0,.5); z-index: 10; }
+  #modal.open { display: grid; }
+  #modal .card { background: #161a22; border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px;
+    width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
+  #modal h2 { margin: 0 0 4px; font-size: 18px; }
+  #modal .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 12px; }
+  #modal table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  #modal td { padding: 7px 6px; border-bottom: 1px solid var(--line); }
+  #modal td:first-child { font-family: Consolas, monospace; color: #a5f3fc; width: 80px; }
+  #modal tr.na td { color: #6b7280; }
+  #modal tr.lk { cursor: pointer; }
+  #modal tr.lk:hover td { background: rgba(255,255,255,.05); }
+  #modal .ok { all: unset; cursor: pointer; margin-top: 14px; padding: 8px 14px; border-radius: 8px;
+    background: rgba(255,255,255,.08); font-size: 13.5px; }
+
+  @media (max-width: 760px) {
+    header { top: 10px; left: 12px; }
+    header p { display: none; }
+    #list { top: 42px; left: 0; right: 0; width: auto; flex-direction: row; overflow-x: auto; border-radius: 0;
+      border-left: 0; border-right: 0; padding: 6px 12px; scrollbar-width: none; }
+    #list .t { display: none; }
+    #list button { flex: 0 0 auto; }
+    #list button small { display: none; }
+    #info { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 58vh; border-radius: 14px 14px 0 0;
+      transform: translateY(105%); }
+    #info.open { transform: none; }
+    #bar { bottom: 10px; }
+    #status { bottom: 70px; left: 12px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<header>
+  <h1>Kit IoT <span>ESP32-C3 Mini</span></h1>
+  <p>SENAI São Carlos · clique em um componente para ver os detalhes</p>
+</header>
+
+<nav id="list"><div class="t">Componentes</div></nav>
+
+<div id="bar">
+  <button id="bHome" title="Voltar à visão inicial">⟲ Visão inicial</button>
+  <button id="bLid" title="Abrir / remover a tampa">Tampa: fechada</button>
+  <button id="bExp" title="Vista explodida">Explodir</button>
+  <button id="bGpio" title="Mapa de GPIOs">Mapa GPIO</button>
+  <button id="bVR" class="xr" hidden>Entrar em VR</button>
+  <button id="bAR" class="xr" hidden>Ver em AR</button>
+</div>
+
+<aside id="info">
+  <div class="head">
+    <div class="tipo" id="iTipo"></div>
+    <h2 id="iNome"></h2>
+    <button class="close" id="iClose" title="Fechar (Esc)">✕</button>
+  </div>
+  <div class="body">
+    <div class="gp" id="iGpio"></div>
+    <table class="specs" id="iSpecs"></table>
+    <p id="iDesc"></p>
+    <div class="dica" id="iDica"></div>
+    <div id="iCodeWrap"><h3>Exemplo (Arduino IDE)</h3><pre id="iCode"></pre></div>
+  </div>
+</aside>
+
+<div id="modal">
+  <div class="card">
+    <h2>Mapa de GPIOs</h2>
+    <div class="sub">Conforme gravado na tampa de acrílico. Clique em uma linha para localizar o componente.</div>
+    <table id="gpioTable"></table>
+    <button class="ok" id="mClose">Fechar</button>
+  </div>
+</div>
+
+<div id="tip"></div>
+<div id="status">Carregando…</div>
+
+<script src="https://cdn.jsdelivr.net/npm/babylonjs@7/babylon.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/babylonjs-gui@7/babylon.gui.min.js"></script>
+<script src="components.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
