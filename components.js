@@ -314,3 +314,16 @@ void loop() {
 };
 
 const COMP_ORDER = ["esp32", "mpu", "lcd", "hcsr04", "ky040", "sg90", "chave", "pcb", "gabinete"];
+
+// Rótulo curto, ícone e etiqueta usados na interface (lista de módulos)
+const COMP_UI = {
+  esp32:    { curto: "ESP32-C3",   icon: "chip",   tag: "MCU" },
+  mpu:      { curto: "MPU-6050",   icon: "gyro",   tag: "IMU" },
+  lcd:      { curto: "LCD 16x2",   icon: "lcd",    tag: "I²C" },
+  hcsr04:   { curto: "HC-SR04",    icon: "sonar",  tag: "Distância" },
+  ky040:    { curto: "KY-040",     icon: "knob",   tag: "Encoder" },
+  sg90:     { curto: "Servo SG90", icon: "servo",  tag: "PWM" },
+  chave:    { curto: "RUN/PROG",   icon: "toggle", tag: "Modo" },
+  pcb:      { curto: "Placa base", icon: "pcb",    tag: "JST" },
+  gabinete: { curto: "Gabinete",   icon: "box",    tag: "120×95×40" },
+};

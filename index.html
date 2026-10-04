@@ -2,154 +2,471 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Kit IoT ESP32-C3</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d12">
+<meta name="description" content="Laboratório virtual 3D / WebXR do Kit IoT ESP32-C3 Mini — SENAI São Carlos">
+<title>Kit IoT ESP32-C3 · Laboratório Virtual</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23e11d48'/%3E%3Crect x='10' y='10' width='12' height='12' rx='2' fill='none' stroke='white' stroke-width='2.4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #12151b;
-    --panel: rgba(22, 26, 34, 0.92);
-    --line: rgba(255, 255, 255, 0.09);
-    --text: #e8ecf2;
-    --muted: #97a1b2;
+    --bg: #0a0d12;
+    --surface: #11161e;
+    --surface2: #171e28;
+    --surface3: #1d2532;
+    --line: rgba(148, 163, 184, 0.13);
+    --line2: rgba(148, 163, 184, 0.24);
+    --text: #e7ecf3;
+    --muted: #8d99ab;
+    --dim: #5f6b7b;
     --accent: #22d3ee;
-    --red: #e11d48;
+    --accent-ink: #032029;
+    --accent-soft: rgba(34, 211, 238, 0.11);
+    --accent-line: rgba(34, 211, 238, 0.55);
+    --brand: #e11d48;
+    --warn: #f59e0b;
+    --ok: #34d399;
+    --err: #f87171;
+
+    --appbar: 56px;
+    --peek: 96px;
+    --side: 400px;
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+
+    --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", Consolas, "Courier New", monospace;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
-    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
-  #c { position: fixed; inset: 0; width: 100%; height: 100%; outline: none; touch-action: none; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none;
+    background: var(--bg); color: var(--text); font: 14px/1.5 var(--font);
+    -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+  }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  [hidden] { display: none !important; }
 
-  header { position: fixed; top: 16px; left: 16px; pointer-events: none; }
-  header h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: .2px; }
-  header h1 span { color: var(--red); }
-  header p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
+  /* ---------------------------------------------------------------- barra superior */
+  .appbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+    height: calc(var(--appbar) + var(--sat));
+    padding: var(--sat) calc(10px + var(--sar)) 0 calc(12px + var(--sal));
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: rgba(10, 13, 18, 0.92); backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .logo {
+    width: 34px; height: 34px; border-radius: 10px; flex: none; display: grid; place-items: center;
+    background: linear-gradient(140deg, #f43f5e, #9f1239); color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 4px 14px rgba(225, 29, 72, 0.25);
+  }
+  .titles { min-width: 0; }
+  .titles h1 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: 0.01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .titles h1 b { color: var(--accent); font-weight: 700; }
+  .titles p { margin: 0; font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .actions { display: flex; align-items: center; gap: 6px; flex: none; }
+  .pill {
+    all: unset; cursor: pointer; height: 36px; padding: 0 12px 0 10px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
+    background: var(--accent); color: var(--accent-ink); transition: background 0.15s, color 0.15s;
+  }
+  .pill:hover { background: #67e8f9; }
+  .pill.off { background: transparent; color: var(--dim); box-shadow: inset 0 0 0 1px var(--line2); }
+  .pill.off:hover { color: var(--muted); }
+  .pill.wait { opacity: 0.6; cursor: progress; }
+  .icon-btn {
+    all: unset; cursor: pointer; width: 40px; height: 40px; border-radius: 11px;
+    display: grid; place-items: center; color: var(--muted); transition: background 0.15s, color 0.15s;
+  }
+  .icon-btn:hover { background: var(--surface2); color: var(--text); }
 
-  #list { position: fixed; top: 72px; left: 16px; width: 210px; display: flex; flex-direction: column; gap: 4px;
-    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px; backdrop-filter: blur(8px); }
-  #list .t { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 4px 6px 6px; }
-  #list button { all: unset; cursor: pointer; padding: 7px 9px; border-radius: 8px; font-size: 13.5px; display: flex;
-    justify-content: space-between; gap: 8px; }
-  #list button small { color: var(--muted); font-size: 11px; font-family: Consolas, monospace; }
-  #list button:hover { background: rgba(255,255,255,.06); }
-  #list button.on { background: rgba(34,211,238,.15); color: #a5f3fc; }
+  /* ---------------------------------------------------------------- palco 3D */
+  #stage {
+    position: fixed; left: 0; right: 0;
+    top: calc(var(--appbar) + var(--sat));
+    bottom: calc(var(--peek) + var(--sab));
+    overflow: hidden;
+    background: radial-gradient(120% 90% at 50% 35%, #1a2230 0%, #0d1117 70%);
+  }
+  #c { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
 
-  #bar { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; flex-wrap: wrap;
-    justify-content: center; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 6px;
-    backdrop-filter: blur(8px); max-width: calc(100vw - 32px); }
-  #bar button { all: unset; cursor: pointer; padding: 8px 13px; border-radius: 9px; font-size: 13.5px; white-space: nowrap; }
-  #bar button:hover { background: rgba(255,255,255,.08); }
-  #bar button.xr { background: var(--accent); color: #062a33; font-weight: 600; }
-  #bar button.xr:hover { background: #67e8f9; }
-  #bar button[hidden] { display: none; }
+  .tools {
+    position: absolute; top: 10px; right: calc(10px + var(--sar));
+    display: flex; flex-direction: column; gap: 8px; z-index: 2;
+  }
+  .tools button {
+    all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 12px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: rgba(17, 22, 30, 0.82); backdrop-filter: blur(10px);
+    box-shadow: inset 0 0 0 1px var(--line2); color: var(--text);
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  }
+  .tools button:hover { background: rgba(29, 37, 50, 0.92); }
+  .tools button span { display: none; font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .tools button[aria-pressed="true"] { color: var(--accent); background: rgba(34, 211, 238, 0.12); box-shadow: inset 0 0 0 1px var(--accent-line); }
 
-  #info { position: fixed; top: 16px; right: 16px; bottom: 16px; width: 380px; background: var(--panel); overflow: hidden;
-    border: 1px solid var(--line); border-radius: 14px; backdrop-filter: blur(10px); display: flex; flex-direction: column;
-    transform: translateX(calc(100% + 24px)); transition: transform .35s ease; }
-  #info.open { transform: none; }
-  #info .head { padding: 18px 18px 12px; border-bottom: 1px solid var(--line); position: relative; }
-  #info .tipo { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
-  #info h2 { margin: 4px 0 0; font-size: 22px; }
-  #info .close { all: unset; cursor: pointer; position: absolute; top: 12px; right: 12px; width: 32px; height: 32px;
-    border-radius: 8px; display: grid; place-items: center; font-size: 18px; color: var(--muted); }
-  #info .close:hover { background: rgba(255,255,255,.08); color: var(--text); }
-  #info .body { padding: 14px 18px 20px; overflow-y: auto; overflow-x: hidden; min-width: 0; min-height: 0; }
-  #info.open ~ #status { display: none; }
-  .gp { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-  .gp span { background: rgba(34,211,238,.12); border: 1px solid rgba(34,211,238,.35); color: #a5f3fc; padding: 4px 8px;
-    border-radius: 7px; font-size: 12.5px; font-family: Consolas, monospace; }
-  .gp span b { color: #fff; }
-  table.specs { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 14px; }
-  table.specs td { padding: 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-  table.specs td:first-child { color: var(--muted); width: 36%; padding-right: 10px; }
-  #info p { font-size: 13.5px; line-height: 1.55; margin: 0 0 12px; color: #d3d9e3; }
-  .dica { background: rgba(250,204,21,.09); border-left: 3px solid #facc15; padding: 9px 11px; border-radius: 6px;
-    font-size: 13px; line-height: 1.5; margin-bottom: 14px; color: #fde68a; }
-  h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 4px 0 8px; }
-  pre { background: #0b0d12; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 12px;
-    line-height: 1.45; overflow-x: auto; margin: 0; color: #c9e4ff; font-family: Consolas, "Courier New", monospace; }
+  #tip {
+    position: fixed; pointer-events: none; z-index: 30; display: none;
+    padding: 5px 9px; border-radius: 8px; font-size: 12.5px; font-weight: 500;
+    background: #0b0f15; box-shadow: inset 0 0 0 1px var(--line2), 0 6px 18px rgba(0, 0, 0, 0.4);
+  }
+  #loader {
+    position: absolute; inset: 0; display: grid; place-items: center; z-index: 3;
+    color: var(--muted); font-size: 13px; background: var(--bg); transition: opacity 0.4s;
+  }
+  #loader.done { opacity: 0; pointer-events: none; }
+  #loader div { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  #loader i { width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--line2); border-top-color: var(--accent);
+    animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-  #tip { position: fixed; pointer-events: none; background: #0b0d12; border: 1px solid var(--line); padding: 4px 8px;
-    border-radius: 6px; font-size: 12.5px; display: none; z-index: 5; }
-  #status { position: fixed; left: 16px; bottom: 16px; font-size: 12px; color: var(--muted); max-width: 280px;
-    pointer-events: none; }
-  #status.err { color: #fca5a5; }
+  /* ---------------------------------------------------------------- painel inferior (mobile) */
+  #sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 15;
+    height: calc(var(--peek) + var(--sab));
+    display: flex; flex-direction: column;
+    background: var(--surface); border-top: 1px solid var(--line2); border-radius: 20px 20px 0 0;
+    box-shadow: 0 -14px 36px rgba(0, 0, 0, 0.45);
+    padding-bottom: var(--sab);
+    transition: height 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  #sheet.dragging { transition: none; }
+  .handle {
+    all: unset; cursor: grab; flex: none; height: 22px; display: flex; align-items: center; justify-content: center;
+    touch-action: none;
+  }
+  .handle span { width: 42px; height: 4px; border-radius: 4px; background: var(--line2); }
+  .handle:hover span { background: var(--muted); }
 
-  #modal { position: fixed; inset: 0; display: none; place-items: center; background: rgba(0,0,0,.5); z-index: 10; }
-  #modal.open { display: grid; }
-  #modal .card { background: #161a22; border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px;
-    width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
-  #modal h2 { margin: 0 0 4px; font-size: 18px; }
-  #modal .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 12px; }
-  #modal table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-  #modal td { padding: 7px 6px; border-bottom: 1px solid var(--line); }
-  #modal td:first-child { font-family: Consolas, monospace; color: #a5f3fc; width: 80px; }
-  #modal tr.na td { color: #6b7280; }
-  #modal tr.lk { cursor: pointer; }
-  #modal tr.lk:hover td { background: rgba(255,255,255,.05); }
-  #modal .ok { all: unset; cursor: pointer; margin-top: 14px; padding: 8px 14px; border-radius: 8px;
-    background: rgba(255,255,255,.08); font-size: 13.5px; }
+  .mods {
+    flex: none; display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;
+    padding: 2px calc(12px + var(--sar)) 12px calc(12px + var(--sal));
+    scroll-snap-type: x proximity; scrollbar-width: none; overscroll-behavior-x: contain;
+  }
+  .mods::-webkit-scrollbar { display: none; }
+  .mod {
+    all: unset; cursor: pointer; flex: none; scroll-snap-align: start;
+    display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 9px; align-items: center;
+    min-height: 56px; padding: 0 13px 0 11px; border-radius: 13px;
+    background: var(--surface2); box-shadow: inset 0 0 0 1px var(--line);
+    transition: background 0.15s, box-shadow 0.15s;
+  }
+  .mod:hover { background: var(--surface3); }
+  .mod svg.i { grid-row: span 2; width: 22px; height: 22px; color: var(--muted); }
+  .mod .n { font-weight: 600; font-size: 13px; white-space: nowrap; line-height: 1.25; }
+  .mod .g { font: 11px/1.3 var(--mono); color: var(--dim); white-space: nowrap; }
+  .mod[aria-selected="true"] { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent-line); }
+  .mod[aria-selected="true"] svg.i { color: var(--accent); }
+  .mod[aria-selected="true"] .g { color: #67e8f9; }
 
-  @media (max-width: 760px) {
-    header { top: 10px; left: 12px; }
-    header p { display: none; }
-    #list { top: 42px; left: 0; right: 0; width: auto; flex-direction: row; overflow-x: auto; border-radius: 0;
-      border-left: 0; border-right: 0; padding: 6px 12px; scrollbar-width: none; }
-    #list .t { display: none; }
-    #list button { flex: 0 0 auto; }
-    #list button small { display: none; }
-    #info { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 58vh; border-radius: 14px 14px 0 0;
-      transform: translateY(105%); }
-    #info.open { transform: none; }
-    #bar { bottom: 10px; }
-    #status { bottom: 70px; left: 12px; }
+  .detail {
+    flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+    padding: 0 calc(16px + var(--sar)) 28px calc(16px + var(--sal));
+    border-top: 1px solid var(--line);
+  }
+
+  /* visão geral */
+  .kicker { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: var(--accent); }
+  #overview h2 { margin: 2px 0 6px; font-size: 19px; }
+  #overview > p { margin: 0 0 14px; color: #c7cfdb; font-size: 13.5px; }
+  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 18px; }
+  .stats div { background: var(--surface2); border-radius: 12px; padding: 10px 12px; box-shadow: inset 0 0 0 1px var(--line); }
+  .stats b { display: block; font-size: 17px; font-family: var(--mono); }
+  .stats span { font-size: 11.5px; color: var(--muted); }
+  h3 {
+    display: flex; align-items: center; gap: 10px; margin: 18px 0 10px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+  }
+  h3::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .gest { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .gest div { display: flex; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 11px; background: var(--surface2); font-size: 12.5px; color: #c7cfdb; }
+  .gest svg.i { color: var(--accent); }
+  .xrs { display: grid; gap: 8px; }
+  .xrs div { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 11px; background: var(--surface2); font-size: 12.5px; color: #c7cfdb; }
+  .xrs b { color: var(--text); }
+  .xrs .ok svg.i { color: var(--ok); }
+  .xrs .no svg.i { color: var(--warn); }
+
+  /* ficha do componente */
+  .ihead {
+    position: sticky; top: 0; z-index: 1; display: flex; gap: 12px; align-items: center;
+    padding: 12px 0 12px; background: var(--surface);
+  }
+  .ico { width: 44px; height: 44px; border-radius: 12px; flex: none; display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.3); }
+  .ico svg.i { width: 24px; height: 24px; }
+  .ttl { min-width: 0; flex: 1; }
+  .ttl h2 { margin: 1px 0 0; font-size: 19px; line-height: 1.2; }
+  .ttl .kicker { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nav { display: flex; gap: 2px; flex: none; }
+  .nav button { all: unset; cursor: pointer; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; color: var(--muted); }
+  .nav button:hover { background: var(--surface2); color: var(--text); }
+  .gp { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 12px; }
+  .gp span { font: 12px/1 var(--mono); padding: 7px 9px; border-radius: 8px;
+    background: var(--accent-soft); color: #a5f3fc; box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.32); }
+  .gp span b { color: #fff; font-weight: 600; }
+  .desc { margin: 0 0 12px; font-size: 13.5px; line-height: 1.6; color: #cfd6e1; }
+  .dica { display: flex; gap: 10px; padding: 10px 12px; border-radius: 11px; font-size: 13px; line-height: 1.5;
+    background: rgba(245, 158, 11, 0.08); color: #fcd9a0; box-shadow: inset 3px 0 0 var(--warn); }
+  .dica svg.i { color: var(--warn); margin-top: 1px; }
+  table.specs { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.specs td { padding: 8px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.specs td:first-child { color: var(--muted); width: 38%; padding-right: 12px; }
+  details.code { margin-top: 16px; border-radius: 12px; background: #0b0f15; box-shadow: inset 0 0 0 1px var(--line2); overflow: hidden; }
+  details.code summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; font-weight: 600; font-size: 13px; min-height: 44px; }
+  details.code summary::-webkit-details-marker { display: none; }
+  details.code summary .chev { margin-left: auto; transition: transform 0.2s; color: var(--muted); }
+  details.code[open] summary .chev { transform: rotate(180deg); }
+  .codebox { position: relative; border-top: 1px solid var(--line); }
+  .codebox pre { margin: 0; padding: 14px; overflow-x: auto; font: 12px/1.55 var(--mono); color: #c9e4ff; }
+  .copy { all: unset; cursor: pointer; position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; gap: 6px;
+    height: 32px; padding: 0 10px; border-radius: 8px; font-size: 12px; background: var(--surface3); color: var(--muted); }
+  .copy:hover { color: var(--text); }
+
+  /* ---------------------------------------------------------------- toast e modais */
+  #toast {
+    position: fixed; left: 50%; top: calc(var(--appbar) + var(--sat) + 12px); z-index: 45;
+    transform: translate(-50%, -10px); opacity: 0; pointer-events: none;
+    width: max-content; max-width: min(520px, calc(100vw - 24px));
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 12px 14px; border-radius: 13px; font-size: 13.5px; line-height: 1.45; white-space: pre-line;
+    background: #141b25; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), inset 0 0 0 1px var(--line2);
+    transition: opacity 0.25s, transform 0.25s;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+  #toast svg.i { color: var(--accent); margin-top: 1px; }
+  #toast.warn svg.i { color: var(--warn); }
+  #toast.err svg.i { color: var(--err); }
+  #toast button { all: unset; cursor: pointer; margin-left: 4px; color: var(--muted); display: grid; place-items: center; width: 24px; height: 24px; }
+
+  .modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: flex-end; justify-content: center;
+    background: rgba(3, 6, 10, 0.62); backdrop-filter: blur(3px); }
+  .modal.open { display: flex; }
+  .modal .card {
+    width: 100%; max-height: 86dvh; overflow-y: auto; overscroll-behavior: contain;
+    background: var(--surface); border-radius: 20px 20px 0 0; border-top: 1px solid var(--line2);
+    padding: 18px calc(18px + var(--sar)) calc(18px + var(--sab)) calc(18px + var(--sal));
+  }
+  .modal .mh { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .modal h2 { margin: 0; font-size: 18px; flex: 1; }
+  .modal .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 12px; }
+  table.gpio { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.gpio td { padding: 9px 6px; border-bottom: 1px solid var(--line); }
+  table.gpio td:first-child { font-family: var(--mono); color: #a5f3fc; width: 82px; }
+  table.gpio td:last-child { text-align: right; color: var(--muted); font-size: 12px; }
+  table.gpio tr.na td { color: var(--dim); }
+  table.gpio tr.lk { cursor: pointer; }
+  table.gpio tr.lk:hover td { background: var(--surface2); }
+  .help p { margin: 0 0 10px; color: #c7cfdb; font-size: 13.5px; }
+  .help ul { margin: 0 0 10px; padding-left: 18px; color: #c7cfdb; font-size: 13.5px; }
+  .help li { margin: 4px 0; }
+
+  /* ---------------------------------------------------------------- overlay do AR (DOM Overlay) */
+  #xrOverlay { position: fixed; inset: 0; z-index: 60; pointer-events: none; font-family: var(--font); color: var(--text); }
+  .xr-top { pointer-events: auto; position: absolute; top: calc(12px + var(--sat)); left: 12px; right: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .xr-top button { all: unset; cursor: pointer; height: 44px; padding: 0 14px; border-radius: 12px; display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(15, 20, 27, 0.86); box-shadow: inset 0 0 0 1px var(--line2); font-weight: 600; font-size: 14px; }
+  .xr-top .exit { background: #b91c1c; box-shadow: none; }
+  .xr-hint { position: absolute; left: 50%; bottom: calc(22px + var(--sab)); transform: translateX(-50%);
+    padding: 9px 14px; border-radius: 999px; background: rgba(15, 20, 27, 0.8); font-size: 13px; white-space: nowrap; }
+  .xr-card { pointer-events: auto; position: absolute; left: 12px; right: 12px; bottom: calc(12px + var(--sab));
+    max-height: 44vh; overflow-y: auto; padding: 14px 16px; border-radius: 16px;
+    background: rgba(13, 18, 25, 0.92); box-shadow: inset 0 0 0 1px var(--line2); }
+  .xr-card .row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .xr-card h2 { margin: 0; font-size: 17px; flex: 1; }
+  .xr-card p { margin: 0; font-size: 13px; color: #cfd6e1; }
+  .xr-card .nav button { width: 40px; height: 40px; }
+
+  /* ---------------------------------------------------------------- telas largas e celular deitado: painel lateral */
+  @media (min-width: 900px), (orientation: landscape) and (max-height: 560px) {
+    #stage { right: calc(var(--side) + var(--sar)); bottom: 0; }
+    #sheet {
+      top: calc(var(--appbar) + var(--sat)); left: auto; right: 0; width: calc(var(--side) + var(--sar));
+      height: auto !important; border-radius: 0; border-top: 0; border-left: 1px solid var(--line2);
+      box-shadow: none; padding-right: var(--sar);
+    }
+    .handle { display: none; }
+    .mods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; padding: 14px 16px 14px; }
+    .mod { min-width: 0; min-height: 52px; padding: 0 10px; column-gap: 8px; }
+    .mod .n, .mod .g { overflow: hidden; text-overflow: ellipsis; }
+    .detail { padding: 0 16px 28px; }
+    .tools { top: 14px; left: 14px; right: auto; flex-direction: row; }
+    .tools button { width: auto; padding: 0 14px 0 12px; }
+    .tools button span { display: inline; }
+    #toast { left: calc(50% - var(--side) / 2); }
+  }
+  @media (orientation: landscape) and (max-height: 560px) {
+    :root { --appbar: 48px; --side: 330px; }
+    .titles p { display: none; }
+    /* celular deitado: módulos em faixa rolável (nomes completos) acima da ficha */
+    .mods { display: flex; overflow-x: auto; overflow-y: hidden; padding: 10px 12px; gap: 6px; }
+    .mod { min-width: auto; min-height: 44px; padding: 0 12px 0 9px; }
+    .mod .n { overflow: visible; }
+    .mod .g { display: none; }
+    .mod svg.i { grid-row: auto; }
+    .tools { top: 10px; left: calc(10px + var(--sal)); }
+    .tools button { width: 44px; padding: 0; }
+    .tools button span { display: none; }
+    .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (min-width: 640px) {
+    .modal { align-items: center; }
+    .modal .card { width: min(500px, calc(100vw - 32px)); border-radius: 18px; border: 1px solid var(--line2); padding: 20px 22px; }
+  }
+  @media (min-width: 1280px) { :root { --side: 440px; } }
+  @media (max-width: 440px) {
+    .pill { padding: 0 12px; }
+    .pill svg.i { display: none; }
+    .logo { width: 32px; height: 32px; }
+  }
+  @media (max-width: 360px) {
+    .titles p { display: none; }
+    .gest { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #sheet, #toast, .tools button { transition: none; }
   }
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
 
-<header>
-  <h1>Kit IoT <span>ESP32-C3 Mini</span></h1>
-  <p>SENAI São Carlos · clique em um componente para ver os detalhes</p>
+<header class="appbar">
+  <div class="brand">
+    <span class="logo" data-icon="chip" aria-hidden="true"></span>
+    <div class="titles">
+      <h1>Kit IoT <b>ESP32-C3</b></h1>
+      <p>Laboratório Virtual · SENAI São Carlos</p>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="pill off" id="bAR" data-icon="ar" aria-disabled="true" title="Verificando suporte a AR…">AR</button>
+    <button class="pill off" id="bVR" data-icon="vr" aria-disabled="true" title="Verificando suporte a VR…">VR</button>
+    <button class="icon-btn" id="bHelp" data-icon="help" aria-label="Ajuda" title="Ajuda"></button>
+  </div>
 </header>
 
-<nav id="list"><div class="t">Componentes</div></nav>
-
-<div id="bar">
-  <button id="bHome" title="Voltar à visão inicial">⟲ Visão inicial</button>
-  <button id="bLid" title="Abrir / remover a tampa">Tampa: fechada</button>
-  <button id="bExp" title="Vista explodida">Explodir</button>
-  <button id="bGpio" title="Mapa de GPIOs">Mapa GPIO</button>
-  <button id="bVR" class="xr" hidden>Entrar em VR</button>
-  <button id="bAR" class="xr" hidden>Ver em AR</button>
-</div>
-
-<aside id="info">
-  <div class="head">
-    <div class="tipo" id="iTipo"></div>
-    <h2 id="iNome"></h2>
-    <button class="close" id="iClose" title="Fechar (Esc)">✕</button>
+<main id="stage">
+  <canvas id="c" aria-label="Modelo 3D interativo do Kit IoT ESP32-C3"></canvas>
+  <div class="tools" role="toolbar" aria-label="Ferramentas de visualização">
+    <button id="bHome" data-icon="reset" aria-label="Vista inicial" title="Vista inicial"><span>Vista inicial</span></button>
+    <button id="bLid" data-icon="lid" aria-label="Tampa" aria-pressed="false" title="Tampa: fechada"><span id="lidLbl">Tampa fechada</span></button>
+    <button id="bExp" data-icon="explode" aria-label="Vista explodida" aria-pressed="false" title="Vista explodida"><span id="expLbl">Explodir</span></button>
+    <button id="bGpio" data-icon="gpio" aria-label="Mapa de GPIOs" title="Mapa de GPIOs"><span>GPIOs</span></button>
   </div>
-  <div class="body">
-    <div class="gp" id="iGpio"></div>
-    <table class="specs" id="iSpecs"></table>
-    <p id="iDesc"></p>
-    <div class="dica" id="iDica"></div>
-    <div id="iCodeWrap"><h3>Exemplo (Arduino IDE)</h3><pre id="iCode"></pre></div>
-  </div>
-</aside>
+  <div id="loader"><div><i></i>Carregando modelo 3D…</div></div>
+</main>
 
-<div id="modal">
+<section id="sheet" aria-label="Módulos do kit e detalhes técnicos" data-state="peek">
+  <button class="handle" id="handle" aria-label="Expandir ou recolher painel" aria-expanded="false"><span></span></button>
+  <div class="mods" id="mods" role="tablist" aria-label="Módulos"></div>
+  <div class="detail" id="detail">
+    <div id="overview">
+      <div style="height:14px"></div>
+      <div class="kicker">Laboratório virtual · Mecatrônica e Indústria 4.0</div>
+      <h2>Kit IoT ESP32-C3 Mini</h2>
+      <p>Explore o kit didático do SENAI São Carlos. Toque em um módulo, no modelo 3D ou na lista, para ver a descrição técnica, os GPIOs e um código de exemplo.</p>
+      <div class="stats">
+        <div><b>9</b><span>módulos</span></div>
+        <div><b>11</b><span>GPIOs mapeados</span></div>
+        <div><b>120×95</b><span>×40 mm</span></div>
+      </div>
+      <h3>Como navegar</h3>
+      <div class="gest" id="gest"></div>
+      <h3>Realidade virtual e aumentada</h3>
+      <div class="xrs" id="xrStatus"></div>
+    </div>
+
+    <article id="info" hidden aria-live="polite">
+      <header class="ihead">
+        <div class="ico" id="iIco"></div>
+        <div class="ttl">
+          <div class="kicker" id="iTipo"></div>
+          <h2 id="iNome"></h2>
+        </div>
+        <div class="nav">
+          <button id="iPrev" data-icon="left" aria-label="Módulo anterior" title="Anterior"></button>
+          <button id="iNext" data-icon="right" aria-label="Próximo módulo" title="Próximo"></button>
+          <button id="iClose" data-icon="x" aria-label="Fechar detalhes" title="Fechar (Esc)"></button>
+        </div>
+      </header>
+      <div class="gp" id="iGpio"></div>
+      <p class="desc" id="iDesc"></p>
+      <div class="dica"><span data-icon="bulb"></span><span id="iDica"></span></div>
+      <h3>Especificações</h3>
+      <table class="specs" id="iSpecs"></table>
+      <details class="code" id="iCodeWrap">
+        <summary><span data-icon="code"></span>Exemplo para Arduino IDE<span class="chev" data-icon="down"></span></summary>
+        <div class="codebox">
+          <button class="copy" id="iCopy" data-icon="copy"><span>Copiar</span></button>
+          <pre id="iCode"></pre>
+        </div>
+      </details>
+    </article>
+  </div>
+</section>
+
+<div id="tip" role="tooltip"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<div class="modal" id="mGpio" role="dialog" aria-modal="true" aria-labelledby="mGpioT">
   <div class="card">
-    <h2>Mapa de GPIOs</h2>
-    <div class="sub">Conforme gravado na tampa de acrílico. Clique em uma linha para localizar o componente.</div>
-    <table id="gpioTable"></table>
-    <button class="ok" id="mClose">Fechar</button>
+    <div class="mh"><h2 id="mGpioT">Mapa de GPIOs</h2><button class="icon-btn" data-close data-icon="x" aria-label="Fechar"></button></div>
+    <p class="sub">Conforme gravado na tampa de acrílico. Toque em uma linha para localizar o módulo.</p>
+    <table class="gpio" id="gpioTable"></table>
   </div>
 </div>
 
-<div id="tip"></div>
-<div id="status">Carregando…</div>
+<div class="modal" id="mHelp" role="dialog" aria-modal="true" aria-labelledby="mHelpT">
+  <div class="card help">
+    <div class="mh"><h2 id="mHelpT">Ajuda</h2><button class="icon-btn" data-close data-icon="x" aria-label="Fechar"></button></div>
+    <h3>No celular ou tablet</h3>
+    <ul>
+      <li><b>1 dedo</b>: girar o modelo</li>
+      <li><b>Pinça</b>: aproximar ou afastar</li>
+      <li><b>2 dedos arrastando</b>: mover a vista</li>
+      <li><b>Toque duplo</b> no fundo: reenquadrar</li>
+      <li>Arraste a <b>alça do painel</b> para expandir ou recolher os detalhes</li>
+    </ul>
+    <h3>No computador</h3>
+    <ul>
+      <li><b>Botão esquerdo</b>: girar · <b>roda</b>: zoom · <b>botão direito</b> ou <b>Ctrl + arrastar</b>: mover</li>
+      <li><b>← →</b>: módulo anterior/próximo · <b>Esc</b>: fechar</li>
+    </ul>
+    <h3>VR e AR</h3>
+    <p><b>VR</b>: Meta Quest (navegador do Quest). <b>AR</b>: Chrome no Android com ARCore, ou Meta Quest 3/3S. É necessário abrir o site por <b>https://</b>. iPhone e iPad ainda não oferecem WebXR no Safari.</p>
+    <p>No headset, aponte o controle (ou faça pinça com a mão) para um componente. No AR do celular, toque no componente na tela.</p>
+  </div>
+</div>
+
+<!-- Interface HTML exibida dentro da sessão AR do celular (WebXR DOM Overlay) -->
+<div id="xrOverlay" hidden>
+  <div class="xr-top" id="xTop">
+    <button class="exit" id="xExit" data-icon="exit">Sair</button>
+    <button id="xCenter" data-icon="reset">Recentrar</button>
+    <button id="xLid" data-icon="lid">Tampa</button>
+    <button id="xExp" data-icon="explode">Explodir</button>
+  </div>
+  <div class="xr-hint" id="xHint">Toque em um componente do kit</div>
+  <div class="xr-card" id="xCard" hidden>
+    <div class="row">
+      <div class="ico" id="xIco"></div>
+      <div class="ttl"><div class="kicker" id="xTipo"></div><h2 id="xNome"></h2></div>
+      <div class="nav"><button id="xClose" data-icon="x" aria-label="Fechar"></button></div>
+    </div>
+    <div class="gp" id="xGpio"></div>
+    <p id="xDesc"></p>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/babylonjs@7/babylon.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/babylonjs-gui@7/babylon.gui.min.js"></script>

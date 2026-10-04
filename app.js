@@ -1,26 +1,75 @@
-// Kit IoT ESP32-C3 Mini — visualizador 3D / WebXR (Babylon.js)
+// Kit IoT ESP32-C3 Mini — laboratório virtual 3D / WebXR (Babylon.js)
 // Modelo procedural em milímetros (raiz "kit" com escala 0.001 → metros).
 // Eixos: X = comprimento (120), Y = altura (40), Z = largura (95). Frente (LCD) em -Z.
 
-const statusEl = document.getElementById("status");
-function setStatus(msg, isErr) {
-  statusEl.textContent = msg || "";
-  statusEl.classList.toggle("err", !!isErr);
+// ---------------------------------------------------------------- ícones (SVG 24×24, traço)
+const ICONS = {
+  chip: '<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>',
+  gyro: '<circle cx="12" cy="12" r="2"/><ellipse cx="12" cy="12" rx="9" ry="3.6"/><ellipse cx="12" cy="12" rx="3.6" ry="9"/>',
+  lcd: '<rect x="2.5" y="5" width="19" height="14" rx="2"/><rect x="5.5" y="8" width="13" height="8" rx="1"/><path d="M8 11h4M8 13.5h7"/>',
+  sonar: '<circle cx="7.5" cy="14" r="3.5"/><circle cx="16.5" cy="14" r="3.5"/><path d="M4 7.5a11 11 0 0 1 16 0M7 10a6.5 6.5 0 0 1 10 0"/>',
+  knob: '<circle cx="12" cy="13" r="7"/><path d="M12 13V8.5M5.5 5A10 10 0 0 1 18.5 5"/><path d="M18.5 2.5V5H16"/>',
+  servo: '<rect x="3" y="10" width="18" height="10" rx="2"/><circle cx="8" cy="10" r="3"/><path d="M8 10l9-5"/><circle cx="17.5" cy="4.8" r="1.2"/>',
+  toggle: '<rect x="2.5" y="7" width="19" height="10" rx="5"/><circle cx="16.5" cy="12" r="3"/>',
+  pcb: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h4v4M17 7v6h-4M7 17h3M14 17h3"/><circle cx="7" cy="7" r="1"/><circle cx="13" cy="13" r="1"/>',
+  box: '<path d="M12 2.8l8.5 4.6v9.2L12 21.2l-8.5-4.6V7.4z"/><path d="M3.5 7.4L12 12l8.5-4.6M12 12v9.2"/>',
+  reset: '<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 4v4.5H8"/><circle cx="12" cy="12" r="2"/>',
+  lid: '<path d="M4.5 20h15v-8h-15z"/><path d="M3 8.5l17-4"/><path d="M10.5 6.7l-.4-1.9 3.9-.9.4 1.9"/>',
+  explode: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><rect x="9" y="9" width="6" height="6" rx="1"/>',
+  gpio: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7.5h.01M8 12h.01M8 16.5h.01M11.5 7.5h4.5M11.5 12h4.5M11.5 16.5h4.5"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.5M12 17h.01"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/>',
+  warn: '<path d="M12 3.5l9 16H3z"/><path d="M12 10v4.5M12 17.2h.01"/>',
+  check: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16.5 9.5"/>',
+  vr: '<path d="M3 9a2.5 2.5 0 0 1 2.5-2.5h13A2.5 2.5 0 0 1 21 9v5.5a2.5 2.5 0 0 1-2.5 2.5H15l-2-2.5h-2L9 17H5.5A2.5 2.5 0 0 1 3 14.5z"/><circle cx="8" cy="11.8" r="1.5"/><circle cx="16" cy="11.8" r="1.5"/>',
+  ar: '<path d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8M21 16v2.5a2.5 2.5 0 0 1-2.5 2.5H16M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16"/><path d="M12 7l4.5 2.5v5L12 17l-4.5-2.5v-5z"/><path d="M7.5 9.5L12 12l4.5-2.5M12 12v5"/>',
+  left: '<path d="M15 18l-6-6 6-6"/>',
+  right: '<path d="M9 18l6-6-6-6"/>',
+  down: '<path d="M6 9l6 6 6-6"/>',
+  x: '<path d="M18 6L6 18M6 6l12 12"/>',
+  code: '<path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/>',
+  copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
+  bulb: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>',
+  rotate: '<path d="M20 12a8 8 0 1 1-2.6-5.9L20 8.5"/><path d="M20 3.5v5h-5"/>',
+  pinch: '<path d="M9 4H4v5M4 4l6 6M15 20h5v-5M20 20l-6-6"/>',
+  move: '<path d="M12 3v18M3 12h18M12 3l-2.5 2.5M12 3l2.5 2.5M12 21l-2.5-2.5M12 21l2.5-2.5M3 12l2.5-2.5M3 12l2.5 2.5M21 12l-2.5-2.5M21 12l-2.5 2.5"/>',
+  tap: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7.5" opacity=".45"/>',
+  exit: '<path d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H15M10 16l-4-4 4-4M6 12h10"/>',
+};
+function icon(name) {
+  return `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ""}</svg>`;
 }
-window.addEventListener("error", (e) => setStatus("Erro: " + e.message, true));
-window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.reason?.message || e.reason), true));
+document.querySelectorAll("[data-icon]").forEach((el) => el.insertAdjacentHTML("afterbegin", icon(el.dataset.icon)));
+
+// ---------------------------------------------------------------- avisos (toast)
+let toastT;
+function toast(msg, kind = "info", ms = 4500) {
+  const t = document.getElementById("toast");
+  t.innerHTML = icon(kind === "info" ? "info" : "warn") + "<span></span><button aria-label=\"Fechar aviso\">" + icon("x") + "</button>";
+  t.querySelector("span").textContent = msg;
+  t.querySelector("button").onclick = () => (t.className = "");
+  t.className = "show " + kind;
+  clearTimeout(toastT);
+  if (ms) toastT = setTimeout(() => (t.className = ""), ms);
+}
+window.addEventListener("error", (e) => toast("Erro: " + e.message, "err", 0));
+window.addEventListener("unhandledrejection", (e) => console.error("[promise]", e.reason));
 
 (async () => {
  try {
+  if (!window.BABYLON) throw new Error("não foi possível carregar o Babylon.js (verifique a conexão)");
   const canvas = document.getElementById("c");
-  const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: false }, true);
+  const isCoarse = matchMedia("(pointer: coarse)").matches;
+  const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: false, stencil: false }, true);
+  // limita a densidade de pixels (celulares com DPR 3 ficam pesados demais)
+  engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio || 1, 2));
   const scene = new BABYLON.Scene(engine);
   const BG = new BABYLON.Color4(0.07, 0.08, 0.1, 1);
   scene.clearColor = BG.clone();
 
   const V3 = BABYLON.Vector3;
   const MM = 0.001;
-  const HOME = { alpha: -Math.PI / 2 - 0.55, beta: 0.95, radius: 0.32, target: new V3(0, 0.018, 0) };
+  const HOME = { alpha: -Math.PI / 2 - 0.55, beta: 0.95, radius: 0.27, target: new V3(0, 0.018, 0) };
 
   // ---------------------------------------------------------------- câmera e luzes
   const camera = new BABYLON.ArcRotateCamera("cam", HOME.alpha, HOME.beta, HOME.radius, HOME.target.clone(), scene);
@@ -30,10 +79,13 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
   camera.lowerRadiusLimit = 0.03;
   camera.upperRadiusLimit = 1.2;
   camera.upperBetaLimit = Math.PI / 2 + 0.25;
-  camera.wheelDeltaPercentage = 0.02;
+  camera.wheelDeltaPercentage = 0.015;
   camera.pinchDeltaPercentage = 0.004;
-  camera.panningSensibility = 6000;
   camera.inertia = 0.85;
+  camera.panningInertia = 0.85;
+  camera.panningDistanceLimit = 0.22;       // não deixa o modelo "sumir" ao mover a vista
+  camera.inputs.attached.pointers.useNaturalPinchZoom = true;
+  if (isCoarse) camera.angularSensibilityX = camera.angularSensibilityY = 520;
 
   const hemi = new BABYLON.HemisphericLight("hemi", new V3(0.2, 1, -0.3), scene);
   hemi.intensity = 0.72;
@@ -42,7 +94,7 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
   sun.position = new V3(0.3, 0.6, -0.3);
   sun.intensity = 0.75;
 
-  const shadows = new BABYLON.ShadowGenerator(2048, sun);
+  const shadows = new BABYLON.ShadowGenerator(isCoarse ? 1024 : 2048, sun);
   shadows.usePercentageCloserFiltering = true;
   shadows.bias = 0.004;
   shadows.normalBias = 0.01;
@@ -74,7 +126,7 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
   }
 
   engine.runRenderLoop(() => scene.render());
-  window.addEventListener("resize", () => engine.resize());
+  new ResizeObserver(() => engine.resize()).observe(canvas);
 
   // ---------------------------------------------------------------- materiais
   const mats = {};
@@ -508,6 +560,7 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
   }
   comps.gabinete.node.getChildMeshes().forEach((m) => { if (m.name === "floor") m.receiveShadows = true; });
 
+
   // ---------------------------------------------------------------- tweens
   const tweens = new Map();
   let tid = 0;
@@ -516,9 +569,11 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
   }
   const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
   const lerp = (a, b, k) => a + (b - a) * k;
+  const clampR = (r) => Math.min(camera.upperRadiusLimit, Math.max(camera.lowerRadiusLimit, r));
 
   // ---------------------------------------------------------------- câmera: voar até
   function flyTo(target, alpha, beta, radius, dur = 1.1) {
+    tweens.delete("zoom");
     const a0 = camera.alpha, b0 = camera.beta, r0 = camera.radius, t0 = camera.target.clone();
     let a1 = alpha;
     while (a1 - a0 > Math.PI) a1 -= 2 * Math.PI;
@@ -531,8 +586,9 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
       camera.target.copyFrom(V3.Lerp(t0, target, e));
     });
   }
-  canvas.addEventListener("pointerdown", () => tweens.delete("cam"));
-  canvas.addEventListener("wheel", () => tweens.delete("cam"), { passive: true });
+  const stopCam = () => { tweens.delete("cam"); tweens.delete("zoom"); };
+  canvas.addEventListener("pointerdown", stopCam);
+  canvas.addEventListener("wheel", stopCam, { passive: true });
 
   function compCenter(c) {
     const { min, max } = c.node.getHierarchyBoundingVectors(true, (m) => m.isEnabled() && m.isPickable);
@@ -546,7 +602,7 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
   const WHITE = new BABYLON.Color3(1, 1, 1);
 
   let selected = null, hovered = null;
-  let xr = null, inXR = false, xrMode = null;
+  let xr = null, inXR = false, xrMode = null, xrBusy = false, domOverlayOn = false;
   let xrPanel, xrPanelUI, xrBar, xrBtns = {};
   function setHL(layer, id, color) {
     for (const m of layer.meshes) m.renderOverlay = false;
@@ -559,19 +615,135 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
   }
 
   const $ = (id) => document.getElementById(id);
-  const info = $("info");
+  const stage = $("stage"), sheet = $("sheet"), info = $("info"), overview = $("overview");
+  const detailEl = $("detail"), mods = $("mods");
+
+  // ---------------------------------------------------------------- layout: painel inferior (mobile) ou lateral (telas largas)
+  const sideMQ = matchMedia("(min-width: 900px), (orientation: landscape) and (max-height: 560px)");
+  const isSide = () => sideMQ.matches;
+  let sheetState = "peek", sheetTargetH = 0, peekPx = 0;
+
+  function sheetHeights() {
+    const sr = stage.getBoundingClientRect(), vh = window.innerHeight;
+    peekPx = Math.max(0, vh - sr.bottom);
+    const full = Math.round(vh - sr.top - 8);
+    return { peek: peekPx, half: Math.min(full, Math.round(Math.max(peekPx + 220, vh * 0.5))), full };
+  }
+  function setSheet(state, { animate = true, refit = true } = {}) {
+    sheetState = state;
+    if (isSide()) { sheet.style.height = ""; sheetTargetH = 0; return; }
+    sheetTargetH = sheetHeights()[state];
+    sheet.classList.toggle("dragging", !animate);
+    sheet.style.height = sheetTargetH + "px";
+    sheet.dataset.state = state;
+    $("handle").setAttribute("aria-expanded", String(state !== "peek"));
+    if (refit) adjustZoom();
+  }
+
+  // Enquadramento: área visível do canvas (descontando o painel que cobre a parte de baixo)
+  function viewMetrics() {
+    const W = canvas.clientWidth || 1, H = canvas.clientHeight || 1;
+    const covered = isSide() ? 0 : Math.max(0, sheetTargetH - peekPx);
+    const tanV = Math.tan(camera.fov / 2);
+    const visH = Math.max(H * 0.3, H - covered);
+    const t = Math.min((tanV * visH) / H, (tanV * W) / H);
+    return { scale: tanV / t };
+  }
+  let lastScale = 1;
+  function adjustZoom() {
+    if (inXR) return;
+    const s = viewMetrics().scale;
+    if (Math.abs(s - lastScale) < 0.01) return;
+    const r0 = camera.radius, r1 = clampR((r0 * s) / lastScale);
+    lastScale = s;
+    tween("zoom", 0.35, (k) => (camera.radius = lerp(r0, r1, ease(k))));
+  }
+  function homeView() {
+    return exploded
+      ? { target: new V3(0, 0.04, 0), alpha: HOME.alpha, beta: 0.9, radius: 0.42 }
+      : { target: HOME.target.clone(), alpha: HOME.alpha, beta: HOME.beta, radius: HOME.radius };
+  }
+  function compView(id) {
+    const c = comps[id];
+    const { center, size } = compCenter(c);
+    const v = c.data.view || { alpha: HOME.alpha, beta: 0.8, radius: size * 2.5 };
+    return { target: center, alpha: v.alpha, beta: v.beta, radius: v.radius };
+  }
+  function focusCam(dur = 1.1) {
+    if (inXR) return;
+    const isHome = !selected || selected === "gabinete";
+    const v = isHome ? homeView() : compView(selected);
+    lastScale = viewMetrics().scale;
+    // em tela estreita (retrato) o kit inteiro cabe com folga: aproxima um pouco a vista geral
+    const k = isHome && lastScale > 1.2 ? 0.86 : 1;
+    flyTo(v.target, v.alpha, v.beta, clampR(v.radius * lastScale * k), dur);
+  }
+
+  // arrastar a alça do painel (mobile): peek ↔ half ↔ full
+  {
+    const grab = $("handle");
+    let y0 = null, h0 = 0, t0 = 0, moved = false;
+    grab.addEventListener("pointerdown", (e) => {
+      if (isSide()) return;
+      y0 = e.clientY; h0 = sheet.getBoundingClientRect().height; t0 = performance.now(); moved = false;
+      grab.setPointerCapture(e.pointerId);
+      sheet.classList.add("dragging");
+    });
+    grab.addEventListener("pointermove", (e) => {
+      if (y0 === null) return;
+      const dy = y0 - e.clientY;
+      if (Math.abs(dy) > 5) moved = true;
+      const hs = sheetHeights();
+      sheet.style.height = Math.min(hs.full, Math.max(hs.peek, h0 + dy)) + "px";
+    });
+    const end = (e) => {
+      if (y0 === null) return;
+      const dy = y0 - e.clientY, v = dy / Math.max(1, performance.now() - t0);
+      y0 = null;
+      sheet.classList.remove("dragging");
+      if (!moved) { setSheet(sheetState === "peek" ? "half" : "peek"); return; }
+      const hs = sheetHeights(), cur = sheet.getBoundingClientRect().height;
+      let target;
+      if (Math.abs(v) > 0.45) target = v > 0 ? (cur < hs.half ? "half" : "full") : (cur > hs.half ? "half" : "peek");
+      else target = ["peek", "half", "full"].reduce((a, b) => (Math.abs(hs[b] - cur) < Math.abs(hs[a] - cur) ? b : a));
+      setSheet(target);
+    };
+    grab.addEventListener("pointerup", end);
+    grab.addEventListener("pointercancel", end);
+  }
+
+  // ---------------------------------------------------------------- lista de módulos e ficha técnica
+  const pinsOf = (id) => GPIO_MAP.filter((g) => g.comp === id || g.shared?.includes(id)).map((g) => g.gpio);
+  for (const id of COMP_ORDER) {
+    const b = document.createElement("button");
+    b.className = "mod";
+    b.dataset.id = id;
+    b.title = COMPONENTS[id].nome;
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", "false");
+    b.innerHTML = icon(COMP_UI[id].icon) + '<span class="n"></span><span class="g"></span>';
+    const pins = pinsOf(id);
+    b.querySelector(".n").textContent = COMP_UI[id].curto;
+    b.querySelector(".g").textContent = pins.length && id !== "esp32" ? "GPIO " + pins.join(",") : COMP_UI[id].tag;
+    b.onclick = () => select(id);
+    mods.append(b);
+  }
+
+  function gpioChips(el, d) {
+    el.innerHTML = "";
+    for (const [p, f] of d.gpios) {
+      const s = document.createElement("span"), b = document.createElement("b");
+      b.textContent = p;
+      s.append(b, " · " + f);
+      el.append(s);
+    }
+  }
   function fillInfo(id) {
     const d = COMPONENTS[id];
+    $("iIco").innerHTML = icon(COMP_UI[id].icon);
     $("iTipo").textContent = d.tipo;
     $("iNome").textContent = d.nome;
-    $("iGpio").innerHTML = "";
-    for (const [p, f] of d.gpios) {
-      const s = document.createElement("span");
-      s.innerHTML = `<b></b> · `;
-      s.querySelector("b").textContent = p;
-      s.append(f);
-      $("iGpio").append(s);
-    }
+    gpioChips($("iGpio"), d);
     const tb = $("iSpecs");
     tb.innerHTML = "";
     for (const [k, v] of d.specs) {
@@ -580,10 +752,11 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
       tr.insertCell().textContent = v;
     }
     $("iDesc").textContent = d.desc;
-    $("iDica").textContent = "💡 " + d.dica;
-    $("iCodeWrap").style.display = d.codigo ? "" : "none";
+    $("iDica").textContent = d.dica;
+    $("iCodeWrap").hidden = !d.codigo;
+    $("iCodeWrap").open = false;
     $("iCode").textContent = d.codigo || "";
-    info.querySelector(".body").scrollTop = 0;
+    detailEl.scrollTop = 0;
   }
 
   function select(id, fromUser = true) {
@@ -593,36 +766,43 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
     selected = id;
     setHL(hl, id, CYAN);
     setHL(hover, null);
-    document.querySelectorAll("#list button").forEach((b) => b.classList.toggle("on", b.dataset.id === id));
+    hovered = null;
+    for (const b of mods.children) b.setAttribute("aria-selected", String(b.dataset.id === id));
+    if (!isSide()) mods.querySelector(`[data-id="${id}"]`)?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
     fillInfo(id);
+    overview.hidden = true;
+    info.hidden = false;
     mpuAxes.setEnabled(id === "mpu");
+    try { history.replaceState(null, "", "#" + id); } catch (e) { /* file:// */ }
     if (inXR) { xrFocus(id); return; }
-    info.classList.add("open");
-    if (id === "gabinete") { goHome(false); return; }
-    const { center, size } = compCenter(c);
-    const v = c.data.view || { alpha: HOME.alpha, beta: 0.8, radius: size * 2.5 };
-    const narrow = window.innerWidth <= 760 ? 1.9 : 1; // celular: tela estreita + painel embaixo
-    flyTo(center, v.alpha, v.beta, v.radius * narrow);
+    if (!isSide() && sheetState === "peek") setSheet("half", { refit: false });
+    focusCam();
   }
   function deselect() {
     selected = null;
     setHL(hl, null);
     mpuAxes.setEnabled(false);
-    info.classList.remove("open");
-    document.querySelectorAll("#list button").forEach((b) => b.classList.remove("on"));
+    info.hidden = true;
+    overview.hidden = false;
+    for (const b of mods.children) b.setAttribute("aria-selected", "false");
     drawLCD("KIT IoT ESP32-C3", "Clique um sensor");
-    if (inXR) xrFocus(null);
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* file:// */ }
+    if (inXR) { xrFocus(null); return; }
+    if (!isSide()) setSheet("peek", { refit: false });
   }
-  function goHome(clear = true) {
-    if (clear) deselect();
-    flyTo(HOME.target, HOME.alpha, HOME.beta, HOME.radius);
+  function goHome() {
+    deselect();
+    focusCam();
+  }
+  function step(dir) {
+    const i = COMP_ORDER.indexOf(selected);
+    select(COMP_ORDER[(i + dir + COMP_ORDER.length) % COMP_ORDER.length], false);
   }
   function toggleLever() {
     leverRun = !leverRun;
     const r0 = lever.rotation.x, r1 = leverRun ? -0.42 : 0.42;
     tween("lever", 0.18, (k) => (lever.rotation.x = lerp(r0, r1, k)));
   }
-
   function compFromMesh(m) {
     while (m) { if (m.metadata?.comp) return m.metadata.comp; m = m.parent; }
     return null;
@@ -631,11 +811,13 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
   // ---------------------------------------------------------------- tampa / explodir
   let lidState = 0; // 0 fechada, 1 aberta, 2 removida
   let exploded = false;
-  const lidLabels = ["Tampa: fechada", "Tampa: aberta", "Tampa: removida"];
+  const lidNames = ["fechada", "aberta", "removida"];
   function lidTargetY() { return lidY + (lidState === 1 ? 45 : 0) + (exploded ? 75 : 0); }
   function setLid(state) {
     lidState = state;
-    $("bLid").textContent = lidLabels[state];
+    $("lidLbl").textContent = "Tampa " + lidNames[state];
+    $("bLid").title = "Tampa: " + lidNames[state] + " (toque para alternar)";
+    $("bLid").setAttribute("aria-pressed", String(state !== 0));
     lid.setEnabled(state !== 2);
     const y0 = lid.position.y, y1 = lidTargetY();
     tween("lid", 0.6, (k) => (lid.position.y = lerp(y0, y1, ease(k))));
@@ -643,9 +825,10 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
   }
   function setExplode(on) {
     exploded = on;
-    $("bExp").textContent = on ? "Montar" : "Explodir";
-    if (!on) wires.setEnabled(true);
-    else wires.setEnabled(false);
+    $("expLbl").textContent = on ? "Montar" : "Explodir";
+    $("bExp").title = on ? "Montar o kit" : "Vista explodida";
+    $("bExp").setAttribute("aria-pressed", String(on));
+    wires.setEnabled(!on);
     for (const c of Object.values(comps)) {
       const p0 = c.node.position.clone();
       const p1 = c.base.add(on ? new V3(...c.data.explode) : V3.Zero());
@@ -655,53 +838,78 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
     tween("lid", 0.9, (k) => (lid.position.y = lerp(y0, y1, ease(k))));
     xrSyncButtons();
     if (!inXR) {
-      if (selected && selected !== "gabinete") setTimeout(() => selected && select(selected, false), 950);
-      else flyTo(new V3(0, on ? 0.04 : 0.018, 0), HOME.alpha, on ? 0.9 : HOME.beta, on ? 0.42 : HOME.radius);
+      if (selected && selected !== "gabinete") setTimeout(() => focusCam(0.6), 950);
+      else focusCam(1.0);
     }
   }
 
-  // ---------------------------------------------------------------- UI HTML
-  const list = $("list");
-  for (const id of COMP_ORDER) {
-    const b = document.createElement("button");
-    b.dataset.id = id;
-    const pins = GPIO_MAP.filter((g) => g.comp === id || g.shared?.includes(id)).map((g) => g.gpio);
-    b.innerHTML = `<span></span><small></small>`;
-    b.firstChild.textContent = COMPONENTS[id].nome;
-    b.lastChild.textContent = pins.length && id !== "esp32" ? "GPIO " + pins.join(",") : "";
-    b.onclick = () => select(id);
-    list.append(b);
-  }
-  $("iClose").onclick = () => goHome();
+  // ---------------------------------------------------------------- controles HTML
   $("bHome").onclick = () => goHome();
   $("bLid").onclick = () => setLid((lidState + 1) % 3);
   $("bExp").onclick = () => setExplode(!exploded);
-  const modal = $("modal");
-  $("bGpio").onclick = () => modal.classList.add("open");
-  $("mClose").onclick = () => modal.classList.remove("open");
-  modal.onclick = (e) => { if (e.target === modal) modal.classList.remove("open"); };
+  $("iClose").onclick = () => goHome();
+  $("iPrev").onclick = () => step(-1);
+  $("iNext").onclick = () => step(1);
+  $("iCopy").onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(COMPONENTS[selected]?.codigo || "");
+      toast("Código copiado para a área de transferência.", "info", 2000);
+    } catch (e) {
+      toast("Não foi possível copiar automaticamente. Selecione o código e copie manualmente.", "warn");
+    }
+  };
+
+  const openModal = (id) => { const m = $(id); m.classList.add("open"); m.querySelector("[data-close]")?.focus(); };
+  const closeModals = () => document.querySelectorAll(".modal.open").forEach((m) => m.classList.remove("open"));
+  document.querySelectorAll(".modal").forEach((m) =>
+    m.addEventListener("click", (e) => { if (e.target === m || e.target.closest("[data-close]")) m.classList.remove("open"); }));
+  $("bGpio").onclick = () => openModal("mGpio");
+  $("bHelp").onclick = () => openModal("mHelp");
   {
     const tb = $("gpioTable");
     for (const g of GPIO_MAP) {
       const tr = tb.insertRow();
       tr.insertCell().textContent = "GPIO" + g.gpio;
       tr.insertCell().textContent = g.func;
+      tr.insertCell().textContent = g.func === "Não Usar" ? "" : COMP_UI[g.comp].curto;
       if (g.func === "Não Usar") tr.className = "na";
       else {
         tr.className = "lk";
-        tr.onclick = () => { modal.classList.remove("open"); select(g.comp); };
+        tr.tabIndex = 0;
+        const go = () => { closeModals(); select(g.comp); };
+        tr.onclick = go;
+        tr.onkeydown = (e) => { if (e.key === "Enter") go(); };
       }
     }
   }
+  {
+    const g = $("gest");
+    const items = isCoarse
+      ? [["rotate", "1 dedo: girar"], ["pinch", "Pinça: zoom"], ["move", "2 dedos: mover"], ["tap", "Toque duplo: reenquadrar"]]
+      : [["rotate", "Arrastar: girar"], ["pinch", "Roda: zoom"], ["move", "Botão direito: mover"], ["tap", "Duplo clique: reenquadrar"]];
+    for (const [ic, txt] of items) {
+      const d = document.createElement("div");
+      d.innerHTML = icon(ic) + "<span></span>";
+      d.querySelector("span").textContent = txt;
+      g.append(d);
+    }
+  }
   window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { if (modal.classList.contains("open")) modal.classList.remove("open"); else goHome(); }
+    if (e.target.closest?.("input, textarea")) return;
+    if (e.key === "Escape") {
+      if (document.querySelector(".modal.open")) closeModals();
+      else if (selected) goHome();
+    } else if (!document.querySelector(".modal.open") && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+      step(e.key === "ArrowRight" ? 1 : -1);
+    }
   });
 
-  // tooltip de hover
+  // ---------------------------------------------------------------- picking, hover e toque duplo
   const tip = $("tip");
+  const canHover = matchMedia("(hover: hover)").matches;
   scene.onPointerObservable.add((pi) => {
     const T = BABYLON.PointerEventTypes;
-    if (pi.type === T.POINTERMOVE && !inXR) {
+    if (pi.type === T.POINTERMOVE && !inXR && canHover && pi.event.pointerType === "mouse") {
       const pick = scene.pick(scene.pointerX, scene.pointerY, (m) => m.isPickable && m.isEnabled());
       const id = pick?.hit ? compFromMesh(pick.pickedMesh) : null;
       const showId = id && id !== "gabinete" ? id : null;
@@ -713,20 +921,37 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
       if (id) {
         tip.style.display = "block";
         tip.textContent = COMPONENTS[id].nome;
-        tip.style.left = pi.event.clientX + 14 + "px";
-        tip.style.top = pi.event.clientY + 14 + "px";
+        tip.style.left = Math.min(pi.event.clientX + 14, window.innerWidth - tip.offsetWidth - 8) + "px";
+        tip.style.top = pi.event.clientY + 16 + "px";
       } else tip.style.display = "none";
     }
+    const hitId = pi.pickInfo?.hit ? compFromMesh(pi.pickInfo.pickedMesh) : null;
     const isClick = (!inXR && pi.type === T.POINTERTAP) || (inXR && pi.type === T.POINTERDOWN);
-    if (isClick && pi.pickInfo?.hit) {
-      const id = compFromMesh(pi.pickInfo.pickedMesh);
-      if (id) select(id);
-    }
+    if (isClick && hitId) select(hitId);
+    if (!inXR && pi.type === T.POINTERDOUBLETAP && !hitId) focusCam(0.7);
   });
   canvas.addEventListener("pointerleave", () => { tip.style.display = "none"; setHL(hover, null); hovered = null; });
 
+  // ---------------------------------------------------------------- redimensionamento / orientação
+  function onLayoutChange() {
+    if (isSide()) { sheet.style.height = ""; sheet.classList.remove("dragging"); sheetTargetH = 0; }
+    else setSheet(sheetState, { animate: false, refit: false });
+    engine.resize();
+    focusCam(0.6);
+  }
+  sideMQ.addEventListener("change", onLayoutChange);
+  matchMedia("(orientation: portrait)").addEventListener("change", () => setTimeout(onLayoutChange, 250));
+  let rzT;
+  window.addEventListener("resize", () => {
+    clearTimeout(rzT);
+    rzT = setTimeout(() => {
+      if (!isSide()) setSheet(sheetState, { animate: false, refit: false });
+      adjustZoom();
+    }, 150);
+  });
+
   // ---------------------------------------------------------------- animações contínuas
-  let time = 0, usTimer = 0, usNext = 0, lcdTimer = 0, encCount = 0, offK = 0, lidFade = 1;
+  let time = 0, usTimer = 0, usNext = 0, lcdTimer = 0, encCount = 0, lidFade = 1;
   scene.onBeforeRenderObservable.add(() => {
     const dt = Math.min(engine.getDeltaTime() / 1000, 0.1);
     time += dt;
@@ -737,14 +962,13 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
       if (p >= 1) { tweens.delete(k); tw.onEnd && tw.onEnd(); }
     }
 
-    // desloca o enquadramento para não ficar atrás do painel de descrição
-    const panelOn = info.classList.contains("open") && !inXR;
-    offK += ((panelOn ? 1 : 0) - offK) * Math.min(1, dt * 6);
-    const tanF = Math.tan(camera.fov / 2) * camera.radius;
-    if (window.innerWidth > 760) {
-      camera.targetScreenOffset.set(-offK * ((info.offsetWidth + 16) / window.innerHeight) * tanF, 0);
-    } else {
-      camera.targetScreenOffset.set(0, offK * (info.offsetHeight / window.innerHeight) * tanF);
+    if (!inXR) {
+      // o painel inferior (mobile) cobre parte do canvas: sobe o centro da vista na mesma proporção
+      const H = canvas.clientHeight || 1, tanV = Math.tan(camera.fov / 2);
+      const covered = isSide() ? 0 : Math.max(0, sheet.getBoundingClientRect().height - peekPx);
+      camera.targetScreenOffset.set(0, (covered / H) * camera.radius * tanV);
+      // arrastar com 2 dedos / botão direito move o modelo na mesma velocidade do dedo
+      camera.panningSensibility = H / (2 * camera.radius * tanV * (1 - camera.panningInertia));
     }
     // tampa quase transparente enquanto um componente interno está em foco
     const lidGoal = selected && selected !== "gabinete" && selected !== "hcsr04" && selected !== "ky040" && selected !== "chave" ? 0.12 : 1;
@@ -804,26 +1028,86 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
   });
 
   // ---------------------------------------------------------------- vista inicial
+  setSheet("peek", { animate: false, refit: false });
+  engine.resize();
   camera.alpha = HOME.alpha - 0.9;
-  camera.radius = 0.5;
-  flyTo(HOME.target, HOME.alpha, HOME.beta, HOME.radius, 1.6);
-  setStatus("");
+  camera.radius = clampR(0.5 * viewMetrics().scale);
+  focusCam(1.6);
+  $("loader").classList.add("done");
   // link direto para um componente: index.html#hcsr04
-  const fromHash = () => { const id = location.hash.slice(1); if (comps[id]) select(id, false); };
+  const fromHash = () => { const id = location.hash.slice(1); if (comps[id] && id !== selected) select(id, false); };
   window.addEventListener("hashchange", fromHash);
   if (location.hash) fromHash();
 
   // ================================================================ WebXR
   const XR_SCALE = MM * 2.5;     // kit 2,5× maior em XR (30 cm de comprimento)
-  const XR_ZOOM = MM * 5;       // escala ao focar um componente
+  const XR_ZOOM = MM * 5;        // escala ao focar um componente
   const xrBase = { pos: new V3(), rotY: 0, fwd: new V3(0, 0, 1), head: new V3(0, 1.6, 0) };
+
+  // Classificação do dispositivo. Celulares Android costumam responder "true" para
+  // isSessionSupported("immersive-vr") e depois falham no requestSession com
+  // "The specified session configuration is not supported" — por isso VR fica restrito
+  // a headsets/desktop, e o celular usa AR.
+  const ua = navigator.userAgent;
+  const isHeadset = /OculusBrowser|Quest|Pico|Wolvic/i.test(ua);
+  const isPhone = !isHeadset && (/Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua)));
+  const MSG = {
+    https: "VR/AR exige conexão segura. Abra o laboratório pelo endereço https://.",
+    noapi: isPhone && /iPhone|iPad|iPod|Macintosh/.test(ua)
+      ? "O Safari do iPhone/iPad ainda não oferece WebXR. Use um Android com Chrome (AR) ou um Meta Quest (VR)."
+      : "Este navegador não oferece WebXR. Use o Chrome no Android (AR) ou o navegador do Meta Quest (VR).",
+    iframe: "VR/AR bloqueado: a página está incorporada sem permissão de XR. Abra o link direto do laboratório.",
+    vrPhone: "VR imersivo não está disponível no navegador do celular. Use o botão AR ou abra o laboratório em um Meta Quest.",
+    vrNo: "Este dispositivo não oferece VR imersivo. Use um headset compatível, como o Meta Quest.",
+    arNo: "Este dispositivo não oferece AR no navegador. É preciso Chrome no Android com o Google Play Services para AR (ARCore), ou um Meta Quest 3/3S.",
+    init: "Não foi possível preparar o modo VR/AR neste navegador. A visualização 3D continua funcionando.",
+  };
+  const xrState = { vr: { ok: false, why: "Verificando suporte a VR…" }, ar: { ok: false, why: "Verificando suporte a AR…" } };
+
+  function renderXR() {
+    for (const k of ["vr", "ar"]) {
+      const btn = $(k === "vr" ? "bVR" : "bAR"), s = xrState[k];
+      btn.classList.toggle("off", !s.ok);
+      btn.setAttribute("aria-disabled", String(!s.ok));
+      btn.title = s.ok ? (k === "vr" ? "Entrar em realidade virtual" : "Ver em realidade aumentada") : s.why;
+    }
+    const box = $("xrStatus");
+    box.innerHTML = "";
+    for (const [k, label] of [["ar", "AR"], ["vr", "VR"]]) {
+      const s = xrState[k], d = document.createElement("div");
+      d.className = s.ok ? "ok" : "no";
+      d.innerHTML = icon(s.ok ? "check" : "warn") + "<span><b></b> </span>";
+      d.querySelector("b").textContent = label + (s.ok ? ": disponível" : ": indisponível");
+      d.querySelector("span").append(s.ok
+        ? (k === "vr" ? "toque no botão VR para entrar." : "toque no botão AR e aponte a câmera para o ambiente.")
+        : s.why);
+      box.append(d);
+    }
+  }
+  renderXR();
+
+  function setBoth(why) { xrState.vr = { ok: false, why }; xrState.ar = { ok: false, why }; }
+  async function detectXR() {
+    if (!window.isSecureContext) return setBoth(MSG.https);
+    if (!navigator.xr) return setBoth(MSG.noapi);
+    const check = async (mode) => {
+      try { return await navigator.xr.isSessionSupported(mode); }
+      catch (e) { if (e && e.name === "SecurityError") throw e; return false; }
+    };
+    let vr = false, ar = false;
+    try { [vr, ar] = await Promise.all([check("immersive-vr"), check("immersive-ar")]); }
+    catch (e) { return setBoth(MSG.iframe); }
+    xrState.ar = ar ? { ok: true } : { ok: false, why: MSG.arNo };
+    xrState.vr = vr && !isPhone ? { ok: true } : { ok: false, why: isPhone ? MSG.vrPhone : MSG.vrNo };
+  }
+
   function buildXRGui() {
-    // painel de descrição
+    // painel de descrição (VR / AR sem DOM Overlay)
     xrPanel = BABYLON.MeshBuilder.CreatePlane("xrPanel", { width: 0.46, height: 0.36 }, scene);
     xrPanel.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
     const adt = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(xrPanel, 1024, 800);
     const bg = new BABYLON.GUI.Rectangle();
-    bg.background = "rgba(18,22,30,0.94)"; bg.cornerRadius = 28; bg.thickness = 3; bg.color = "#22d3ee";
+    bg.background = "rgba(17,22,30,0.95)"; bg.cornerRadius = 28; bg.thickness = 3; bg.color = "#22d3ee";
     adt.addControl(bg);
     const sp = new BABYLON.GUI.StackPanel();
     sp.paddingLeft = sp.paddingRight = "40px"; sp.paddingTop = "30px";
@@ -843,7 +1127,7 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
       nome: mk(58, "#ffffff", "76px", true),
       gpio: mk(32, "#a5f3fc", "56px"),
       specs: mk(29, "#d3d9e3", "400px"),
-      dica: mk(27, "#fde68a", "110px"),
+      dica: mk(27, "#fcd9a0", "110px"),
     };
     const close = BABYLON.GUI.Button.CreateSimpleButton("xrClose", "✕  Fechar");
     close.width = "220px"; close.height = "64px"; close.color = "white"; close.background = "#334155";
@@ -855,7 +1139,7 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
     bg.addControl(close);
     xrPanel.setEnabled(false);
 
-    // barra de ferramentas
+    // barra de ferramentas 3D
     xrBar = BABYLON.MeshBuilder.CreatePlane("xrBar", { width: 0.5, height: 0.07 }, scene);
     xrBar.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
     const bdt = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(xrBar, 1400, 196);
@@ -863,7 +1147,7 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
     row.isVertical = false;
     bdt.addControl(row);
     const defs = [
-      ["center", "Recentrar", () => { placeKit(); }],
+      ["center", "Recentrar", () => placeKit()],
       ["lid", "Tampa", () => setLid((lidState + 1) % 3)],
       ["exp", "Explodir", () => setExplode(!exploded)],
       ["exit", "Sair", () => xr.baseExperience.exitXRAsync()],
@@ -878,10 +1162,20 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
       xrBtns[k] = b;
     }
     xrBar.setEnabled(false);
+
+    // controles HTML do AR (DOM Overlay): toques nos botões não devem selecionar peças atrás deles
+    for (const el of [$("xTop"), $("xCard")]) el.addEventListener("beforexrselect", (e) => e.preventDefault());
+    $("xExit").onclick = () => xr.baseExperience.exitXRAsync();
+    $("xCenter").onclick = () => placeKit();
+    $("xLid").onclick = () => setLid((lidState + 1) % 3);
+    $("xExp").onclick = () => setExplode(!exploded);
+    $("xClose").onclick = () => deselect();
   }
   function xrSyncButtons() {
+    $("xLid").lastChild.textContent = "Tampa " + lidNames[lidState];
+    $("xExp").lastChild.textContent = exploded ? "Montar" : "Explodir";
     if (!xrBtns.lid) return;
-    xrBtns.lid.textBlock.text = lidLabels[lidState];
+    xrBtns.lid.textBlock.text = "Tampa " + lidNames[lidState];
     xrBtns.exp.textBlock.text = exploded ? "Montar" : "Explodir";
   }
 
@@ -891,13 +1185,15 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
     fwd.y = 0;
     if (fwd.lengthSquared() < 1e-4) fwd.set(0, 0, 1);
     fwd.normalize();
+    const ar = xrMode === "immersive-ar";
     const head = cam.position.clone();
-    const pos = head.add(fwd.scale(0.55));
-    pos.y = Math.max(0.6, head.y - 0.45);
+    const pos = head.add(fwd.scale(ar ? 0.5 : 0.55));
+    pos.y = ar ? head.y - 0.22 : Math.max(0.6, head.y - 0.45);
     xrBase.pos.copyFrom(pos);
     xrBase.rotY = Math.atan2(fwd.x, fwd.z);
     xrBase.fwd.copyFrom(fwd);
     xrBase.head.copyFrom(head);
+    tweens.delete("xrKit");
     kit.position.copyFrom(pos);
     kit.rotation.y = xrBase.rotY;
     kit.scaling.setAll(XR_SCALE);
@@ -906,9 +1202,9 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
     pedestal.getChildMeshes().forEach((m) => {
       if (m.name === "pCol") { m.scaling.y = Math.max(0.05, pos.y - 0.03); m.position.y = -0.03 - (pos.y - 0.03) / 2; }
     });
-    pedestal.setEnabled(xrMode === "immersive-vr");
+    pedestal.setEnabled(!ar);
     xrBar.position.copyFrom(pos.add(fwd.scale(0.25)).add(new V3(0, 0.32, 0)));
-    xrBar.setEnabled(true);
+    xrBar.setEnabled(!domOverlayOn);
     if (selected) xrFocus(selected);
   }
 
@@ -925,7 +1221,7 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
         kit.rotation.y = lerp(r0, r1, e);
       });
       if (id === "gabinete") showXRPanel(id, xrBase.pos.add(right.scale(0.32)).add(new V3(0, 0.25, 0)));
-      else xrPanel.setEnabled(false);
+      else hideXRPanel();
       return;
     }
     // centro do componente em coordenadas locais do kit
@@ -950,6 +1246,16 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
 
   function showXRPanel(id, pos) {
     const d = COMPONENTS[id];
+    if (domOverlayOn) {
+      $("xIco").innerHTML = icon(COMP_UI[id].icon);
+      $("xTipo").textContent = d.tipo;
+      $("xNome").textContent = d.nome;
+      gpioChips($("xGpio"), d);
+      $("xDesc").textContent = d.desc;
+      $("xCard").hidden = false;
+      $("xHint").hidden = true;
+      return;
+    }
     xrPanelUI.tipo.text = d.tipo.toUpperCase();
     xrPanelUI.nome.text = d.nome;
     xrPanelUI.gpio.text = d.gpios.map(([p, f]) => p + " · " + f).join("   ");
@@ -958,64 +1264,115 @@ window.addEventListener("unhandledrejection", (e) => setStatus("Erro: " + (e.rea
     xrPanel.position.copyFrom(pos);
     xrPanel.setEnabled(true);
   }
+  function hideXRPanel() {
+    xrPanel.setEnabled(false);
+    $("xCard").hidden = true;
+    $("xHint").hidden = !domOverlayOn;
+  }
 
-  async function enterXR(mode) {
+  function xrErrorMessage(kind, e) {
+    const name = (e && e.name) || "", label = kind === "vr" ? "VR" : "AR";
+    if (name === "NotSupportedError") {
+      const why = isHeadset
+        ? `O headset recusou a sessão ${label}. Atualize o navegador do Quest e verifique se ${kind === "ar" ? "o passthrough" : "o modo imersivo"} está liberado nas configurações.`
+        : kind === "vr" ? (isPhone ? MSG.vrPhone : MSG.vrNo) : MSG.arNo;
+      xrState[kind] = { ok: false, why };   // não oferece de novo algo que o dispositivo recusou
+      renderXR();
+      return why;
+    }
+    if (name === "NotAllowedError" || name === "SecurityError")
+      return `O ${label} não foi autorizado. Permita o acesso à câmera e aos sensores de movimento para este site e toque em ${label} novamente.`;
+    if (name === "InvalidStateError") return `Já existe uma sessão ${label} aberta. Feche-a e tente de novo.`;
+    return `Não foi possível iniciar o ${label} neste dispositivo. A visualização 3D continua disponível.`;
+  }
+
+  async function enterXR(kind) {
+    const s = xrState[kind];
+    if (!s.ok) { toast(s.why, "warn", 7000); return; }
+    if (xrBusy || inXR) return;
+    xrBusy = true;
+    const btn = $(kind === "vr" ? "bVR" : "bAR");
+    btn.classList.add("wait");
+    const mode = kind === "vr" ? "immersive-vr" : "immersive-ar";
+    xrMode = mode;
+    // DOM Overlay só no AR (UI HTML sobre a câmera do celular); fica de fora da sessão VR
+    const fm = xr.baseExperience.featuresManager, DOM = BABYLON.WebXRFeatureName.DOM_OVERLAY;
     try {
-      xrMode = mode;
-      await xr.baseExperience.enterXRAsync(mode, "local-floor");
+      if (mode === "immersive-ar" && !fm.getEnabledFeature(DOM)) fm.enableFeature(DOM, "latest", { element: "#xrOverlay" }, true, false);
+      if (mode === "immersive-vr" && fm.getEnabledFeature(DOM)) fm.disableFeature(DOM);
+    } catch (e) { console.warn("[WebXR] DOM Overlay indisponível", e); }
+    try {
+      // "local" é garantido em qualquer sessão imersiva; "local-floor" (VR) dá a altura do piso no Quest.
+      // Somente recursos opcionais são pedidos, então a sessão não é recusada por falta de recurso.
+      await xr.baseExperience.enterXRAsync(mode, mode === "immersive-ar" ? "local" : "local-floor");
     } catch (e) {
-      try { await xr.baseExperience.enterXRAsync(mode, "local"); }
-      catch (e2) { setStatus("Não foi possível iniciar " + (mode === "immersive-ar" ? "AR" : "VR") + ": " + (e2.message || e2), true); }
+      console.warn("[WebXR] falha ao iniciar", mode, e);
+      toast(xrErrorMessage(kind, e), "warn", 9000);
+    } finally {
+      xrBusy = false;
+      btn.classList.remove("wait");
     }
   }
+  $("bVR").onclick = () => enterXR("vr");
+  $("bAR").onclick = () => enterXR("ar");
 
   try {
-    if (!window.isSecureContext) throw new Error("WebXR exige HTTPS");
-    if (!navigator.xr) throw new Error("navegador sem WebXR");
-    const [vrOK, arOK] = await Promise.all([
-      BABYLON.WebXRSessionManager.IsSessionSupportedAsync("immersive-vr"),
-      BABYLON.WebXRSessionManager.IsSessionSupportedAsync("immersive-ar"),
-    ]);
-    if (!vrOK && !arOK) throw new Error("dispositivo sem suporte a VR/AR");
-    xr = await scene.createDefaultXRExperienceAsync({
-      disableDefaultUI: true,
-      disableTeleportation: true,
-      floorMeshes: [ground],
-    });
-    buildXRGui();
-    if (vrOK) { $("bVR").hidden = false; $("bVR").onclick = () => enterXR("immersive-vr"); }
-    if (arOK) { $("bAR").hidden = false; $("bAR").onclick = () => enterXR("immersive-ar"); }
+    await detectXR();
+    if (xrState.vr.ok || xrState.ar.ok) {
+      xr = await scene.createDefaultXRExperienceAsync({
+        disableDefaultUI: true,
+        disableTeleportation: true,
+        disableNearInteraction: true,
+        floorMeshes: [ground],
+      });
+      if (!xr || !xr.baseExperience) throw new Error("XR experience not created");
+      buildXRGui();
 
-    xr.baseExperience.onStateChangedObservable.add((state) => {
-      if (state === BABYLON.WebXRState.IN_XR) {
-        inXR = true;
-        info.classList.remove("open");
-        tip.style.display = "none";
-        setHL(hover, null);
-        if (xrMode === "immersive-ar") {
-          scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
-          ground.setEnabled(false);
+      xr.baseExperience.onStateChangedObservable.add((state) => {
+        if (state === BABYLON.WebXRState.IN_XR) {
+          inXR = true;
+          const session = xr.baseExperience.sessionManager.session;
+          domOverlayOn = xrMode === "immersive-ar" && !!(session && session.domOverlayState);
+          $("xrOverlay").hidden = !domOverlayOn;
+          $("xCard").hidden = true;
+          $("xHint").hidden = !domOverlayOn;
+          tip.style.display = "none";
+          setHL(hover, null);
+          camera.targetScreenOffset.set(0, 0);
+          if (xrMode === "immersive-ar") {
+            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+            ground.setEnabled(false);
+          }
+          setTimeout(placeKit, 350);
+        } else if (state === BABYLON.WebXRState.NOT_IN_XR) {
+          const wasIn = inXR;
+          inXR = false;
+          domOverlayOn = false;
+          $("xrOverlay").hidden = true;
+          tweens.delete("xrKit");
+          scene.clearColor = BG.clone();
+          ground.setEnabled(true);
+          pedestal.setEnabled(false);
+          xrPanel.setEnabled(false);
+          xrBar.setEnabled(false);
+          kit.position.setAll(0);
+          kit.rotation.y = 0;
+          kit.scaling.setAll(MM);
+          if (wasIn) {
+            engine.resize();
+            if (selected) select(selected, false); else focusCam();
+          }
         }
-        setTimeout(placeKit, 350);
-      } else if (state === BABYLON.WebXRState.NOT_IN_XR) {
-        inXR = false;
-        tweens.delete("xrKit");
-        scene.clearColor = BG.clone();
-        ground.setEnabled(true);
-        pedestal.setEnabled(false);
-        xrPanel.setEnabled(false);
-        xrBar.setEnabled(false);
-        kit.position.setAll(0);
-        kit.rotation.y = 0;
-        kit.scaling.setAll(MM);
-        if (selected) select(selected, false); else goHome();
-      }
-    });
+      });
+    }
   } catch (xrErr) {
-    setStatus("ℹ️ VR/AR indisponível aqui (" + (xrErr.message || xrErr) + "). A visualização 3D funciona normalmente.");
+    console.warn("[WebXR] inicialização", xrErr);
+    setBoth(MSG.init);
   }
+  renderXR();
  } catch (err) {
   console.error(err);
-  setStatus("Erro: " + (err.message || err), true);
+  document.getElementById("loader")?.classList.add("done");
+  toast("Erro ao carregar o laboratório: " + (err.message || err), "err", 0);
  }
 })();
