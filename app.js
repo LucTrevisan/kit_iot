@@ -497,8 +497,20 @@ window.addEventListener("unhandledrejection", (e) => console.error("[promise]", 
     C(k, "nut", 10, 2, 17.3, -3, 0, M.metal, "x", { tess: 6 });
     encShaft = node("shaft", k, 0, -3, 0);
     C(encShaft, "shaftC", 6, 15, 24.5, 0, 0, M.metal, "x");
-    B(encShaft, "shaftSlot", 0.3, 1, 6.1, 32.05, 0, 0, M.dark);
-    B(encShaft, "shaftFlat", 9, 1, 6.1, 27, 2.6, 0, M.metalDk);
+    // knob WH148 encaixado no eixo: saia, corpo serrilhado levemente cônico e tampa amarela com ponteiro
+    const knobBlack = mat("knobBlack", "#141416", { spec: 0.35, power: 40 });
+    const knobYellow = mat("knobYellow", "#f6d10a", { spec: 0.4, power: 48 });
+    C(encShaft, "knobSkirt", 16.5, 2.4, 19.8, 0, 0, knobBlack, "x", { tess: 40 });
+    // (eixo "x": diameterTop fica do lado da parede, diameterBottom na ponta)
+    C(encShaft, "knobBody", 14, 13, 27.5, 0, 0, knobBlack, "x", { tess: 40, top: 14, bottom: 12.4 });
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      const rib = B(encShaft, "knobRib", 12.4, 0.7, 0.9, 27.6, 6.65 * Math.cos(a), 6.65 * Math.sin(a), knobBlack);
+      rib.rotation.x = a;
+    }
+    C(encShaft, "knobCap", 11.6, 1, 34.4, 0, 0, knobYellow, "x", { tess: 40 });
+    B(encShaft, "knobStripe", 12.6, 1.3, 2.4, 27.9, 6.75, 0, knobYellow);          // ponteiro lateral
+    B(encShaft, "knobTip", 0.6, 5.6, 2.6, 34.95, 3.2, 0, knobYellow);              // ponteiro na face
     B(k, "hdr", 2.5, 2.5, 12.7, -2.05, 11.5, 0, M.blackPl);
     for (let i = 0; i < 5; i++) C(k, "pin", 0.9, 6, -2.05, 15.5, -5.08 + i * 2.54, M.gold, "y", { tess: 8 });
     for (const z of [-5, 5]) B(k, "res", 1.2, 1, 3, -1.3, 7, z, M.chip);

@@ -188,10 +188,12 @@ void loop() {
       ["Botão", "Push-button no eixo (SW), ativo em nível baixo"],
       ["Alimentação", "3,3 V a 5 V"],
       ["Pull-ups", "10 kΩ em CLK e DT no módulo"],
+      ["Knob", "WH148 preto com ponteiro amarelo, encaixe no eixo de 6 mm"],
     ],
     desc:
       "Botão giratório usado como interface do usuário: navegar em menus, ajustar valores ou o ângulo do servo. " +
-      "O sentido de giro é descoberto comparando a fase entre CLK e DT; o eixo também funciona como botão ao ser pressionado. O eixo sai pela lateral do gabinete.",
+      "O sentido de giro é descoberto comparando a fase entre CLK e DT; o eixo também funciona como botão ao ser pressionado. " +
+      "O eixo sai pela lateral do gabinete e recebe um knob WH148, cujo ponteiro amarelo indica a posição.",
     dica: "O pino SW não tem pull-up no módulo: configure GPIO7 como INPUT_PULLUP. Use interrupção em CLK para não perder passos.",
     codigo:
 `const int CLK = 5, DT = 6, SW = 7;
